@@ -8,6 +8,7 @@ class Vector(object):
     CANNOT_NORMALIZE_ZERO_VECTOR_MSG = 'Cannot normalize the zero vector'
     NO_UNIQUE_PARALLEL_COMPONENT_MSG= 'There is not a unique parallel component to the zero vector'
     NO_UNIQUE_ORTHOGONAL_COMPONENT_MSG = 'There is not a unique orthogonal component to the zero vector'
+    ONLY_DEFINED_IN_TWO_THREE_DIMS_MSG = 'Only defined in tow or three dimensions'
 
     def __init__(self, coordinates):
         try:
@@ -133,28 +134,34 @@ class Vector(object):
     def decomposition(self, b):
         return str(self.component_parallel_to(b)) + " + " + str(self.component_orthogonal_to(b))
 
-    def cross_product(self, w):
-        x1 = self.coordinates[0]
-        y1 = self.coordinates[1]
-        z1 = self.coordinates[2]
-        x2 = w.coordinates[0]
-        y2 = w.coordinates[1]
-        z2 = w.coordinates[2]
+    def cross(self, v):
+        try:
+            x_1, y_1, z_1 = self.coordinates
+            x_2, y_2, z_2 = v.coordinates
 
-        r1 = Decimal((y1*z2)-(y2*z1))
-        r2 = Decimal(-((x1*z2) - (x2*z1)))
-        r3 = Decimal((x1*y2) - (x2*y1))
+            new_coordinates = [ Decimal((y_1*z_2)-(y_2*z_1)),
+                                Decimal(-((x_1*z_2) - (x_2*z_1))),
+                                Decimal((x_1*y_2) - (x_2*y_1)) ]
+            return Vector(new_coordinates)
 
-        return Vector([r1,r2,r3])
+        except ValueError as e:
+            msg = str(e)
+            if msg == 'not enough values to unpack (expected 3, got 2)': #if msg == 'need more than 2 values to unpack':
+                self_embedded_in_R3 = Vector(self.coordinates + ('0',))
+                v_embedded_in_R3 = Vector(v.coordinates + ('0',))
+                return self_embedded_in_R3.cross(v_embedded_in_R3)
+            elif (msg == 'too many values to unpack' or msg == 'Need at least 2 coordinates'):
+                raise Exception(self.ONLY_DEFINED_IN_TWO_THREE_DIMS_MSG)
+            else:
+                raise e
 
-    def area_of_parallelogram(self, w):
-        r = self.cross_product(w)
-        area = Decimal(r.coordinates[0]**2 + r.coordinates[1]**2 + r.coordinates[2]**2).sqrt()
-        return area
 
-    def area_of_triangle(self, w):
-        area_tri = Decimal( self.area_of_parallelogram(w) / Decimal("2.0"))
-        return area_tri
+    def area_of_parallelogram_with(self, v):
+        cross_product = self.cross(v)
+        return cross_product.magnitude()#return Decimal(r.coordinates[0]**2 + r.coordinates[1]**2 + r.coordinates[2]**2).sqrt()
+
+    def area_of_triangle_with(self, v):
+        return Decimal( self.area_of_parallelogram_with(v) / Decimal('2.0'))
 
     def __str__(self):
         return 'Vector: {}'.format(self.coordinates)
